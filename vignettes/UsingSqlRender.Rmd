@@ -111,7 +111,7 @@ A last limitation is that not all functions supported in one dialect have an equ
 Below an example:
 
 ```{r echo=TRUE}
-sql <- "SELECT DATEDIFF(dd,a,b) FROM table; "
+sql <- "SELECT DATEDIFF(dd,a,b) FROM table;"
 translate(sql, targetDialect = "oracle")
 ```
 
@@ -131,6 +131,7 @@ The `targetDialect` parameter can have the following values:
   - "sqlite extended"
   - "sql server"
   - "iris"
+  - "trino"
 
 ## Functions and structures supported by translate
 

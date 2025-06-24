@@ -1386,6 +1386,10 @@ iris,+ CAST(@a AS varchar),|| CAST(@a AS varchar)
 iris,COUNT_BIG(@a),COUNT(@a)
 iris,.dbo.,.
 iris,CREATE TABLE #@table (@definition),DROP TABLE IF EXISTS #@table; CREATE GLOBAL TEMPORARY TABLE #@table (@definition)
+iris,"WITH @a AS (@b), @c CREATE TABLE @d AS @e;","DROP TABLE IF EXISTS #@a;\n CREATE GLOBAL TEMPORARY TABLE #@a AS @b;\n WITH @c CREATE TABLE @d AS @e;\n DROP TABLE IF EXISTS #@a;"
+iris,WITH @a AS (@b) CREATE TABLE @c AS SELECT @d;,DROP TABLE IF EXISTS #@a;\n CREATE GLOBAL TEMPORARY TABLE #@a AS @b;\n CREATE TABLE @c AS SELECT @d;\n DROP TABLE IF EXISTS #@a;
+iris,"WITH @a AS (@b), @c CREATE GLOBAL TEMPORARY TABLE @d AS @e;","DROP TABLE IF EXISTS #@a;\n CREATE GLOBAL TEMPORARY TABLE #@a AS @b;\n WITH @c CREATE GLOBAL TEMPORARY TABLE @d AS @e;\n DROP TABLE IF EXISTS #@a;"
+iris,WITH @a AS (@b) CREATE GLOBAL TEMPORARY TABLE @c AS @d;,DROP TABLE IF EXISTS #@a;\n CREATE GLOBAL TEMPORARY TABLE #@a AS @b;\n CREATE GLOBAL TEMPORARY TABLE @c AS @d;\n DROP TABLE IF EXISTS #@a;
 iris,"IF OBJECT_ID('@table', 'U') IS NULL CREATE TABLE @table (@definition);",CREATE TABLE IF NOT EXISTS @table (@definition);
 iris,"IF OBJECT_ID('@table', 'U') IS NOT NULL DROP TABLE @table;",DROP TABLE IF EXISTS @table;
 iris,"IF OBJECT_ID('tempdb..#@table', 'U') IS NOT NULL DROP TABLE #@table;",DROP TABLE IF EXISTS #@table;
@@ -1400,9 +1404,6 @@ iris,SELECT @a INTO #@b FROM @c;,CREATE GLOBAL TEMPORARY TABLE #@b AS SELECT @a 
 iris,SELECT @a INTO @b FROM @c;,CREATE TABLE @b AS SELECT @a FROM @c;
 iris,SELECT @a INTO @b;,CREATE TABLE @b AS SELECT @a;
 iris,SELECT @a INTO #@b;,CREATE GLOBAL TEMPORARY TABLE #@b AS SELECT @a;
-iris,"WITH @cte CREATE TABLE #@table AS @select;","CREATE GLOBAL TEMPORARY TABLE #@table AS WITH @cte @select;"
-iris,"WITH @cte CREATE GLOBAL TEMPORARY TABLE @table AS @select;","CREATE GLOBAL TEMPORARY TABLE @table AS WITH @cte @select;"
-iris,"WITH @cte CREATE TABLE @table AS @select;","CREATE TABLE @table AS WITH @cte @select;"
 iris,#,%temp_prefix%%session_id%
 iris,UPDATE STATISTICS @a;,TUNE TABLE @a;
 iris,"--HINT BUCKET(@a, @b)", "-- haven't looked into this yet, skip it for now"
@@ -1439,3 +1440,96 @@ iris,EOMONTH(@date),LAST_DAY(@date)
 iris,.DOMAIN ,."DOMAIN" 
 iris,NEWID(),$TSQL_NEWID()
 iris,RAND(),$TSQL_NEWID()
+trino,...@([0-9]+|y)a,xxx@a
+trino,TRY_CAST(@a),CAST(@a)
+trino,"IIF(@condition, @whentrue, @whenfalse)","CASE WHEN @condition THEN @whentrue ELSE @whenfalse END"
+trino,"ROUND(@a,@b)","ROUND(CAST(@a AS DECIMAL),@b)"
+trino,"HASHBYTES('MD5',@a)","MD5(@a)"
+trino,"CONVERT(VARBINARY, @a, 1)","CAST(CONCAT('x', @a) AS BIT(32))"
+trino,"CONVERT(DATE, @a)","TO_DATE(@a, 'yyyymmdd')"
+trino,"DATEADD(second,@seconds,@datetime)","date_add('second',@seconds,@datetime)"
+trino,"DATEADD(minute,@minutes,@datetime)","date_add('minute',@minutes,@datetime)"
+trino,"DATEADD(hour,@hours,@datetime)","date_add('hour',@hours,@datetime)"
+trino,"DATEADD(d,@days,@date)","date_add('day',@days,@date)"
+trino,"DATEADD(dd,@days,@date)","date_add('day',@days,@date)"
+trino,"DATEADD(day,@days,@date)","date_add('day',@days,@date)"
+trino,"DATEADD(m,@months,@date)","date_add('month',@months,@date)"
+trino,"DATEADD(mm,@months,@date)","date_add('month',@months,@date)"
+trino,"DATEADD(month,@months,@date)","date_add('month',@months,@date)"
+trino,"DATEADD(yy,@years,@date)","date_add('year',@years,@date)"
+trino,"DATEADD(yyyy,@years,@date)","date_add('year',@years,@date)"
+trino,"DATEADD(year,@years,@date)","date_add('year',@years,@date)"
+trino,"DATEDIFF(second,@start, @end)","date_diff('second',@start,@end)"
+trino,"DATEDIFF(minute,@start, @end)","date_diff('minute',@start,@end)"
+trino,"DATEDIFF(hour,@start, @end)","date_diff('hour',@start,@end)"
+trino,"DATEDIFF(d,@start, @end)","date_diff('day',@start,@end)"
+trino,"DATEDIFF(dd,@start, @end)","date_diff('day',@start,@end)"
+trino,"DATEDIFF(day,@start, @end)","date_diff('day',@start,@end)"
+trino,"DATEDIFF(year,@start, @end)","date_diff('year',@start,@end)"
+trino,"DATEDIFF(yyyy,@start, @end)","date_diff('year',@start,@end)"
+trino,"DATEDIFF(yy,@start, @end)","date_diff('year',@start,@end)"
+trino,"DATEDIFF(month,@start, @end)","date_diff('month',@start,@end)"
+trino,"DATEDIFF(mm,@start, @end)","date_diff('month',@start,@end)"
+trino,"DATEDIFF(m,@start, @end)","date_diff('month',@start,@end)"
+trino,"CONVERT(VARCHAR,@date,112)","TO_CHAR(@date, 'YYYYMMDD')"
+trino,GETDATE(),CURRENT_DATE
+trino,+ '@a',|| '@a'
+trino,'@a' +,'@a' ||
+trino,CAST(@a AS varchar(@b)) +,CAST(@a AS varchar(@b)) ||
+trino,+ CAST(@a AS varchar(@b)),|| CAST(@a AS varchar(@b))
+trino,CAST(@a AS varchar) +,CAST(@a AS varchar) ||
+trino,+ CAST(@a AS varchar),|| CAST(@a AS varchar)
+trino,"DATEFROMPARTS(@year,@month,@day)","DATE(CAST(2025 AS VARCHAR) || '-' || LPAD(CAST(4 AS VARCHAR), 2, '0') || '-' || LPAD(CAST(14 AS VARCHAR), 2, '0'))"
+trino,"DATETIMEFROMPARTS(@year,@month,@day,@hour,@minute,@second,@ms)","TO_DATE(TO_CHAR(@year,'0000')||'-'||TO_CHAR(@month,'00')||'-'||TO_CHAR(@day,'00')||' '||TO_CHAR(@hour,'00')||':'||TO_CHAR(@minute,'00')||':'||TO_CHAR(@second,'00'), 'YYYY-MM-DD HH24:MI:SS')"
+trino,"DATEPART(YEAR, @date)",EXTRACT(YEAR FROM @date)
+trino,"DATEPART(MONTH, @date)",EXTRACT(MONTH FROM @date)
+trino,"DATEPART(DAY, @date)",EXTRACT(DAY FROM @date)
+trino,EOMONTH(@date),"last_day_of_month(@date)"
+trino,STDEV(@a),STDDEV(@a)
+trino,VAR(@a),VARIANCE(@a)
+trino,RAND(),RANDOM()
+trino,LEN(@a),CHAR_LENGTH(@a)
+trino,"CHARINDEX(@a,@b)","STRPOS(@b,@a)"
+trino,"LOG(@expression,@base)","<L_O_G>(CAST((@base) AS DECIMAL),CAST((@expression) AS DECIMAL))"
+trino,LOG(@expression),LN(CAST((@expression) AS REAL))
+trino,<L_O_G>,LOG
+trino,LOG10(@expression),"LOG(10,CAST((@expression) AS DECIMAL))"
+trino,"ISNULL(@a,@b)","COALESCE(@a,@b)"
+trino,"ISNUMERIC(@a)","CASE WHEN (CAST(@a AS VARCHAR) ~ '^([0-9]+\.?[0-9]*|\.[0-9]+)$') THEN 1 ELSE 0 END"
+trino,COUNT_BIG(@a),COUNT(@a)
+trino,SQUARE(@a),((@a)*(@a))
+trino,NEWID(),MD5(RANDOM()::TEXT || CLOCK_TIMESTAMP()::TEXT)
+trino,USE @schema;,SET search_path TO @schema;
+trino,"IF OBJECT_ID('@table', 'U') IS NULL CREATE TABLE @table (@definition);",CREATE TABLE IF NOT EXISTS @table (@definition);
+trino,"IF OBJECT_ID('@table', 'U') IS NOT NULL DROP TABLE @table;",DROP TABLE IF EXISTS @table;
+trino,"IF OBJECT_ID('tempdb..#@table', 'U') IS NOT NULL DROP TABLE @table;",DROP TABLE IF EXISTS @table;
+trino,.dbo.,.
+trino,CREATE TABLE #@table (@definition),CREATE TABLE @table (@definition)
+trino,CREATE CLUSTERED INDEX @index_name ON @table (@variable);,
+trino,CREATE UNIQUE CLUSTERED INDEX @index_name ON @table (@variable);,
+trino,PRIMARY KEY NONCLUSTERED,PRIMARY KEY
+trino,DATETIME,TIMESTAMP
+trino,DATETIME2,TIMESTAMP
+trino,VARCHAR(MAX),TEXT
+trino,FLOAT,DECIMAL
+trino,WITH @a AS @b SELECT @c INTO @d FROM @e;,CREATE TABLE @d\nAS\nWITH @a AS @b SELECT\n@c\nFROM\n@e;
+trino,SELECT @a INTO @b FROM @c;,CREATE TABLE @b AS\nSELECT\n@a\nFROM\n@c;
+trino,SELECT @a INTO @b;,CREATE TABLE @b AS\nSELECT\n@a;
+trino,SELECT TOP @([0-9]+)rows @a;,SELECT @a LIMIT @rows;
+trino,(SELECT TOP @([0-9]+)rows @a),(SELECT @a LIMIT @rows)
+trino,SELECT DISTINCT TOP @([0-9]+)rows @a;,SELECT DISTINCT @a LIMIT @rows;
+trino,(SELECT DISTINCT TOP @([0-9]+)rows @a),(SELECT DISTINCT @a LIMIT @rows)
+trino,UPDATE STATISTICS @a;,ANALYZE @a;
+trino,"ALTER TABLE @table ALTER COLUMN @([^ ]+)a @b;","ALTER TABLE @table ALTER COLUMN @a TYPE @b;"
+trino,"ALTER TABLE @table ADD @a, @b;","ALTER TABLE @table <token1> @a, <token2> @b;"
+trino,"<token2> @b, @c;","<token2> @b, <token2> @c;"
+trino,"ALTER TABLE @table ADD @a;","ALTER TABLE @table <token1> @a;"
+trino,"<token1>",ADD COLUMN
+trino,"<token2>",ADD COLUMN
+trino,ADD COLUMN COLUMN,ADD COLUMN
+trino,ADD COLUMN CONSTRAINT,ADD CONSTRAINT
+trino,#@([^\s]+)table.@([^\s]+)field,%session_id%@table.@field
+trino,#,%temp_prefix%%session_id%
+trino,TRUNCATE TABLE @a;,
+trino,"LEFT(@str,@chars)","substr(@str,1,@chars)"
+trino,"RIGHT(@str,@chars)","substr(@str,-@chars)"

@@ -9,6 +9,7 @@ standalone/build/*
 /build
 /bin
 /target
+/tmp
 .idea
 *.iml
 errorReportSql.txt

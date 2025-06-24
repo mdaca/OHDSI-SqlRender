@@ -43,6 +43,7 @@ public class SqlTranslate {
 	private static String BIG_QUERY = "bigquery";
 	private static String IMPALA = "impala";
 	private static String SPARK = "spark";
+    private static String TRINO = "trino";
 
 	protected static class Block extends StringUtils.Token {
 		public boolean isVariable;
@@ -508,7 +509,7 @@ public class SqlTranslate {
 			sql = BigQuerySparkTranslate.translateSpark(sql);
 		}
 		sql = translateSql(sql, replacementPatterns, sessionId, oracleTempPrefix);
-		if (targetDialect.equalsIgnoreCase(IMPALA) || targetDialect.equalsIgnoreCase(BIG_QUERY) || targetDialect.equals(SPARK)) {
+        if (targetDialect.equalsIgnoreCase(IMPALA) || targetDialect.equalsIgnoreCase(BIG_QUERY) || targetDialect.equals(SPARK) || targetDialect.equals(TRINO)) {
 			sql = StringUtils.replaceWithConcat(sql);
 		}
 		return sql;
@@ -556,6 +557,7 @@ public class SqlTranslate {
 
 	private static void ensurePatternsAreLoaded(String pathToReplacementPatterns) {
 		if (targetToReplacementPatterns != null)
+		// if (targetTwhyoReplacementPatterns != null) // ?? TODO: remove this obvious typo committed to github
 			return;
 		else {
 			lock.lock();
