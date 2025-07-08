@@ -32,6 +32,9 @@ import java.util.Stack;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 public class SqlTranslate {
 	public static int SESSION_ID_LENGTH = 8;
@@ -43,7 +46,9 @@ public class SqlTranslate {
 	private static String BIG_QUERY = "bigquery";
 	private static String IMPALA = "impala";
 	private static String SPARK = "spark";
-    private static String TRINO = "trino";
+	private static String TRINO = "trino";
+
+	private final static Logger LOG = LoggerFactory.getLogger(SqlTranslate.class);
 
 	protected static class Block extends StringUtils.Token {
 		public boolean isVariable;
@@ -509,7 +514,7 @@ public class SqlTranslate {
 			sql = BigQuerySparkTranslate.translateSpark(sql);
 		}
 		sql = translateSql(sql, replacementPatterns, sessionId, oracleTempPrefix);
-        if (targetDialect.equalsIgnoreCase(IMPALA) || targetDialect.equalsIgnoreCase(BIG_QUERY) || targetDialect.equals(SPARK) || targetDialect.equals(TRINO)) {
+		if (targetDialect.equalsIgnoreCase(IMPALA) || targetDialect.equalsIgnoreCase(BIG_QUERY) || targetDialect.equals(SPARK) || targetDialect.equals(TRINO)) {
 			sql = StringUtils.replaceWithConcat(sql);
 		}
 		return sql;
@@ -557,9 +562,11 @@ public class SqlTranslate {
 
 	private static void ensurePatternsAreLoaded(String pathToReplacementPatterns) {
 		if (targetToReplacementPatterns != null)
-		// if (targetTwhyoReplacementPatterns != null) // ?? TODO: remove this obvious typo committed to github
+		// if (targetToReplacementPatterns != null) // ?? TODO: remove this obvious typo committed to github
 			return;
 		else {
+			LOG.debug("Replacement patterns not loaded yet. Loading now with path: {}.", pathToReplacementPatterns);
+
 			lock.lock();
 			if (targetToReplacementPatterns == null) { // Could have been loaded before acquiring the lock
 				try {
