@@ -1,0 +1,93 @@
+name: Build with CodeArtifact
+
+on:
+  push:
+    branches:
+      - develop
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up environment variables and obtain CodeArtifact auth token
+        env:
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+        run: |
+          echo "Setting up AWS CodeArtifact authentication token"
+          export CODEARTIFACT_AUTH_TOKEN=$(aws codeartifact get-authorization-token \
+            --domain ${{ secrets.CODEARTIFACT_DOMAIN }} \
+            --domain-owner $AWS_ACCOUNT_ID \
+            --region $AWS_REGION \
+            --query authorizationToken \
+            --output text)
+      
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Build with Maven
+        env:
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          TARGET_DIR: "/home/runner/work/OHDSI-ArachneCommons/OHDSI-ArachneCommons/target"
+        run: |
+          echo "Running Maven Build"
+          export CODEARTIFACT_AUTH_TOKEN=$(aws codeartifact get-authorization-token \
+            --domain ${{ secrets.CODEARTIFACT_DOMAIN }} \
+            --domain-owner $AWS_ACCOUNT_ID \
+            --region $AWS_REGION \
+            --query authorizationToken \
+            --output text) 
+          mvn clean install
+          package_list=$(aws codeartifact list-packages \
+          --domain mdaca \
+          --repository OHDSI \
+          --format maven \
+          --query "packages[].{namespace:namespace,package:package}" \
+          --output text)
+          
+          # Iterate through each package in the list
+          echo "$package_list" | while read -r namespace package; do
+            # Only proceed if both namespace and package have values
+            if [[ -n "$namespace" && -n "$package" ]]; then
+              # Check if namespace is org.ohdsi.sql or starts with org.ohdsi.sql.
+              if [[ "$namespace" == "org.ohdsi.sql" || "$namespace" == org.ohdsi.sql.* ]]; then
+                echo "Deleting package $package in namespace $namespace"
+                aws codeartifact delete-package \
+                --domain mdaca \
+                --repository OHDSI \
+                --format maven \
+                --namespace "$namespace" \
+                --package "$package"
+              else
+              echo "Skipping namespace $namespace (not in org.ohdsi.sql)"
+              fi
+            else
+            echo "Skipping invalid entry: namespace=$namespace, package=$package"
+            fi
+          done
+          mvn deploy -s .m2/settings.xml -DaltDeploymentRepository=codeartifact::default::https://mdaca-201959883603.d.codeartifact.us-east-2.amazonaws.com/maven/OHDSI/ 2>&1 | tee build.log
+      - name: Extract JAR URLs and download to trivy_scan
+        run: |
+           mkdir -p trivy_scan
+           # Remove all 'Progress' lines
+           cat build.log | sed '/Progress/d' > build_clean.log
+      
+      - name: Upload Reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-reports
+          path: |
+            build.log
+            build_clean.log
